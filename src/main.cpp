@@ -47,9 +47,13 @@ int main() {
 
   std::cout << "Waiting for a client to connect...\n";
 
-  accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
+  int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
   std::cout << "Client connected\n";
+  std::string res = "HTTP/1.1 200 OK\r\n\r\n";
+  write(client_fd, res.c_str(), strlen(res.c_str()));
 
+  shutdown(client_fd, SHUT_WR);
+  close(client_fd);
   close(server_fd);
 
   return 0;
