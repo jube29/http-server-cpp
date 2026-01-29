@@ -1,11 +1,18 @@
+#include <route.h>
+#include <types.h>
+
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <cstring>
+#include <expected>
+#include <http.h>
 #include <iostream>
 #include <netdb.h>
+#include <route.h>
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <types.h>
 #include <unistd.h>
 
 int main() {
@@ -42,20 +49,28 @@ int main() {
     return 1;
   }
 
+  http::create_route(http::Method::Get, "/", [&]() {
+    return http::Response{{http::Version::Http11, http::status::OK}};
+  });
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 
   std::cout << "Waiting for a client to connect...\n";
 
-  int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
-  std::cout << "Client connected\n";
-  std::string res = "HTTP/1.1 200 OK\r\n\r\n";
-  write(client_fd, res.c_str(), strlen(res.c_str()));
+  constexpr int BYTES = 4096;
+  while (int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len)) {
+    char buffer[BYTES] = {0};
+    read(client_fd, buffer, BYTES - 1);
+    std::expected<http::Request, http::ParseError> request = http::parse_request(std::string(buffer));
+    http::Response response = http::use_route(request->requestLine.method, request->requestLine.uri);
+    std::string response_str = http::r_to_string(response);
+    write(client_fd, response_str.c_str(), strlen(response_str.c_str()));
+    shutdown(client_fd, SHUT_WR);
+    close(client_fd);
+  }
 
-  shutdown(client_fd, SHUT_WR);
-  close(client_fd);
+  std::cout << "Closing ..." << std::endl;
   close(server_fd);
-
   return 0;
 }
 
