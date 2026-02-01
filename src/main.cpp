@@ -1,3 +1,4 @@
+#include <config.h>
 #include <parse.h>
 #include <route.h>
 #include <serialize.h>
@@ -35,15 +36,14 @@ int main() {
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(4221);
+  server_addr.sin_port = htons(config::PORT);
 
   if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-    std::cerr << "Failed to bind to port 4221\n";
+    std::cerr << "Failed to bind to port " << config::PORT << "\n";
     return 1;
   }
 
-  int connection_backlog = 5;
-  if (listen(server_fd, connection_backlog) != 0) {
+  if (listen(server_fd, config::CONNECTION_BACKLOG) != 0) {
     std::cerr << "listen failed\n";
     return 1;
   }
@@ -55,10 +55,9 @@ int main() {
 
   std::cout << "Waiting for a client to connect...\n";
 
-  constexpr int BYTES = 4096;
   while (int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len)) {
-    char buffer[BYTES] = {0};
-    read(client_fd, buffer, BYTES - 1);
+    char buffer[config::BUFFER_SIZE] = {0};
+    read(client_fd, buffer, config::BUFFER_SIZE - 1);
     std::expected<http::Request, http::ParseError> request = http::parse_request(std::string(buffer));
     http::Response response = http::use_route(request->requestLine.method, request->requestLine.uri);
     std::string response_str = http::r_to_string(response);
