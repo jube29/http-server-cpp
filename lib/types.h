@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace http {
 
@@ -22,7 +23,11 @@ constexpr Status NOT_FOUND = {404, "Not Found"};
 
 enum class Version { Http11 };
 enum class Method { Get };
-enum class ParseError { MalformedRequest, MalformedRequestLine, UnsupportedMethod, MalformedPath, UnsupportedVersion };
+enum class ParseError { MalformedRequest, MalformedRequestLine, UnsupportedMethod, MalformedPath, UnsupportedVersion, MalformedHeader };
+
+struct Headers {
+  std::unordered_map<std::string, std::string> data;
+};
 
 struct RequestLine {
   Method method;
@@ -32,6 +37,7 @@ struct RequestLine {
 
 struct Request {
   RequestLine requestLine;
+  Headers headers;
 };
 
 struct ResponseLine {
@@ -41,6 +47,8 @@ struct ResponseLine {
 
 struct Response {
   ResponseLine responseLine;
+  Headers headers;
+  std::string body;
 };
 
 inline std::optional<Method> parse_method(std::string_view strv) {
@@ -52,9 +60,19 @@ inline std::optional<Method> parse_method(std::string_view strv) {
 
 inline std::string rl_to_string(const ResponseLine &rl) {
   Status status = rl.status;
-  return VERSION + " " + std::to_string(status.code) + " " + status.reason + "\r\n\r\n";
+  return VERSION + " " + std::to_string(status.code) + " " + status.reason + "\r\n";
 }
 
-inline std::string r_to_string(const Response &r) { return rl_to_string(r.responseLine); }
+inline std::string headers_to_string(const Headers &h) {
+  std::string result;
+  for (const auto &[key, value] : h.data) {
+    result += key + ": " + value + "\r\n";
+  }
+  return result;
+}
+
+inline std::string r_to_string(const Response &r) {
+  return rl_to_string(r.responseLine) + headers_to_string(r.headers) + "\r\n" + r.body;
+}
 } // namespace http
 

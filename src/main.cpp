@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <expected>
-#include <http.h>
+#include <parse.h>
 #include <iostream>
 #include <netdb.h>
 #include <route.h>
@@ -49,9 +49,8 @@ int main() {
     return 1;
   }
 
-  http::create_route(http::Method::Get, "/", [&]() {
-    return http::Response{{http::Version::Http11, http::status::OK}};
-  });
+  http::create_route(http::Method::Get, "/",
+                     [&]() { return http::Response{{http::Version::Http11, http::status::OK}, {}, ""}; });
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 

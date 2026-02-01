@@ -44,6 +44,30 @@ expected<RequestLine, ParseError> parse_request_line(string_view strv) {
   return requestLine;
 }
 
+expected<Headers, ParseError> parse_headers(string_view strv) {
+  Headers headers;
+  while (!strv.empty() && strv != "\r\n") {
+    size_t line_end = strv.find("\r\n");
+    if (line_end == string_view::npos) {
+      return unexpected(ParseError::MalformedHeader);
+    }
+    string_view line = strv.substr(0, line_end);
+    size_t colon = line.find(':');
+    if (colon == string_view::npos) {
+      return unexpected(ParseError::MalformedHeader);
+    }
+    string name(line.substr(0, colon));
+    string_view value = line.substr(colon + 1);
+    // trim leading whitespace from value
+    while (!value.empty() && value[0] == ' ') {
+      value.remove_prefix(1);
+    }
+    headers.data[name] = string(value);
+    strv.remove_prefix(line_end + 2);
+  }
+  return headers;
+}
+
 expected<Request, ParseError> parse_request(string_view strv) {
   Request request{};
   size_t request_line_end = strv.find("\r\n");
@@ -56,7 +80,13 @@ expected<Request, ParseError> parse_request(string_view strv) {
   } else {
     return unexpected(requestLine.error());
   }
-  // TODO headers
+  strv.remove_prefix(request_line_end + 2); // skip \r\n
+  auto headers = parse_headers(strv);
+  if (headers.has_value()) {
+    request.headers = headers.value();
+  } else {
+    return unexpected(headers.error());
+  }
   // TODO body
   return request;
 }
