@@ -87,16 +87,13 @@ void create_route(Method method, string route, RouteHandler handler) {
   end.add_handler(method, handler);
 }
 
-void use_route(const Request &request, Response &response) {
-  string route = request.requestLine.uri;
+optional<RouteHandler> get_route_handler(Method method, string route) {
   normalize_route(route);
   auto *end = find_route(root, route);
-  if (!end || !end->get_handler(request.requestLine.method)) {
-    response.responseLine = {Version::Http11, status::NOT_FOUND};
-    return;
+  if (!end) {
+    return nullopt;
   }
-  RouteHandler handler = *end->get_handler(request.requestLine.method);
-  handler(request, response);
+  return end->get_handler(method);
 }
 
 } // namespace http

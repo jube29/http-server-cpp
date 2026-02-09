@@ -8,6 +8,15 @@ namespace {
 Request make_request(Method method, const std::string &uri) {
   return Request{{method, uri, "HTTP/1.1"}, {}};
 }
+
+void dispatch(const Request &req, Response &res) {
+  auto handler = get_route_handler(req.requestLine.method, req.requestLine.uri);
+  if (handler) {
+    (*handler)(req, res);
+  } else {
+    res.responseLine = {Version::Http11, status::NOT_FOUND};
+  }
+}
 } // namespace
 
 // Public API tests
@@ -23,7 +32,7 @@ TEST_F(RoutePublicAPITest, CreateAndUseRouteCallsHandler) {
 
   Request req = make_request(Method::Get, "/api/handler-test");
   Response res{};
-  use_route(req, res);
+  dispatch(req, res);
   EXPECT_TRUE(called);
   EXPECT_EQ(res.responseLine.status.code, 200);
 }
@@ -36,14 +45,14 @@ TEST_F(RoutePublicAPITest, UseRouteReturnsHandlerResponse) {
 
   Request req = make_request(Method::Get, "/api/response-test");
   Response res{};
-  use_route(req, res);
+  dispatch(req, res);
   EXPECT_EQ(res.responseLine.status.code, 404);
 }
 
 TEST_F(RoutePublicAPITest, UseRouteReturns404ForUnknownRoute) {
   Request req = make_request(Method::Get, "/nonexistent/route");
   Response res{};
-  use_route(req, res);
+  dispatch(req, res);
   EXPECT_EQ(res.responseLine.status.code, 404);
 }
 
@@ -64,13 +73,13 @@ TEST_F(RoutePublicAPITest, DifferentRoutesAreIndependent) {
 
   Request req_a = make_request(Method::Get, "/api/independent-a");
   Response res_a{};
-  use_route(req_a, res_a);
+  dispatch(req_a, res_a);
   EXPECT_EQ(call_count_a, 1);
   EXPECT_EQ(call_count_b, 0);
 
   Request req_b = make_request(Method::Get, "/api/independent-b");
   Response res_b{};
-  use_route(req_b, res_b);
+  dispatch(req_b, res_b);
   EXPECT_EQ(call_count_a, 1);
   EXPECT_EQ(call_count_b, 1);
 }
@@ -85,7 +94,7 @@ TEST_F(RoutePublicAPITest, NestedRouteWorks) {
 
   Request req = make_request(Method::Get, "/api/users/profile/settings");
   Response res{};
-  use_route(req, res);
+  dispatch(req, res);
   EXPECT_TRUE(called);
   EXPECT_EQ(res.responseLine.status.code, 200);
 }
@@ -100,7 +109,7 @@ TEST_F(RoutePublicAPITest, RouteNormalizationWithoutLeadingSlash) {
 
   Request req = make_request(Method::Get, "api/no-leading-slash");
   Response res{};
-  use_route(req, res);
+  dispatch(req, res);
   EXPECT_TRUE(called);
   EXPECT_EQ(res.responseLine.status.code, 200);
 }
@@ -115,7 +124,7 @@ TEST_F(RoutePublicAPITest, RouteNormalizationMixedSlashes) {
 
   Request req = make_request(Method::Get, "api/mixed-slashes");
   Response res{};
-  use_route(req, res);
+  dispatch(req, res);
   EXPECT_TRUE(called);
   EXPECT_EQ(res.responseLine.status.code, 200);
 }

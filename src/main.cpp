@@ -61,7 +61,12 @@ int main() {
     read(client_fd, buffer, config::BUFFER_SIZE - 1);
     std::expected<http::Request, http::ParseError> request = http::parse_request(std::string(buffer));
     http::Response response{};
-    http::use_route(*request, response);
+    auto handler = http::get_route_handler(request->requestLine.method, request->requestLine.uri);
+    if (handler) {
+      (*handler)(*request, response);
+    } else {
+      response.responseLine = {http::Version::Http11, http::status::NOT_FOUND};
+    }
     std::string response_str = http::r_to_string(response);
     write(client_fd, response_str.c_str(), strlen(response_str.c_str()));
     shutdown(client_fd, SHUT_WR);
