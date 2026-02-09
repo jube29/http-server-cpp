@@ -48,8 +48,9 @@ int main() {
     return 1;
   }
 
-  http::create_route(http::Method::Get, "/",
-                     [&]() { return http::Response{{http::Version::Http11, http::status::OK}, {}, ""}; });
+  http::create_route(http::Method::Get, "/", [](const http::Request &req, http::Response &res) {
+    res.responseLine = {http::Version::Http11, http::status::OK};
+  });
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 
@@ -59,7 +60,8 @@ int main() {
     char buffer[config::BUFFER_SIZE] = {0};
     read(client_fd, buffer, config::BUFFER_SIZE - 1);
     std::expected<http::Request, http::ParseError> request = http::parse_request(std::string(buffer));
-    http::Response response = http::use_route(request->requestLine.method, request->requestLine.uri);
+    http::Response response{};
+    http::use_route(*request, response);
     std::string response_str = http::r_to_string(response);
     write(client_fd, response_str.c_str(), strlen(response_str.c_str()));
     shutdown(client_fd, SHUT_WR);

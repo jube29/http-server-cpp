@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -57,6 +58,8 @@ inline std::optional<Method> parse_method(std::string_view strv) {
   }
   return std::nullopt;
 }
+
+using RouteHandler = std::function<void(const Request &, Response &)>;
 
 } // namespace http
 

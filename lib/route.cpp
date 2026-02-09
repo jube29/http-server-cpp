@@ -1,3 +1,4 @@
+#include "route.h"
 #include "types.h"
 
 #include <functional>
@@ -13,7 +14,7 @@ namespace {
 struct RouteNode {
 public:
   const unordered_map<string, RouteNode> &get_children() const { return this->children; }
-  optional<function<Response()>> get_handler(Method method) const {
+  optional<RouteHandler> get_handler(Method method) const {
     auto it = this->handlers.find(method);
     if (it != this->handlers.end()) {
       return it->second;
@@ -29,11 +30,11 @@ public:
     return this->children[str];
   }
 
-  void add_handler(Method method, function<Response()> handler) { this->handlers[method] = handler; }
+  void add_handler(Method method, RouteHandler handler) { this->handlers[method] = handler; }
 
 private:
   unordered_map<string, RouteNode> children;
-  unordered_map<Method, function<Response()>> handlers;
+  unordered_map<Method, RouteHandler> handlers;
 };
 
 RouteNode root;
@@ -80,20 +81,22 @@ const RouteNode *find_route(const RouteNode &node, string_view route) {
 
 namespace http {
 
-void create_route(Method method, string route, function<Response()> handler) {
+void create_route(Method method, string route, RouteHandler handler) {
   normalize_route(route);
   RouteNode &end = create_route_internal(root, route);
   end.add_handler(method, handler);
 }
 
-Response use_route(Method method, string route) {
+void use_route(const Request &request, Response &response) {
+  string route = request.requestLine.uri;
   normalize_route(route);
   auto *end = find_route(root, route);
-  if (!end || !end->get_handler(method)) {
-    return Response{{Version::Http11, status::NOT_FOUND}};
+  if (!end || !end->get_handler(request.requestLine.method)) {
+    response.responseLine = {Version::Http11, status::NOT_FOUND};
+    return;
   }
-  function<Response()> res = *end->get_handler(method);
-  return res();
+  RouteHandler handler = *end->get_handler(request.requestLine.method);
+  handler(request, response);
 }
 
 } // namespace http
