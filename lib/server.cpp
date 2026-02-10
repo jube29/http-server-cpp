@@ -1,21 +1,15 @@
 #include "server.h"
 #include "config.h"
-#include "parse.h"
-#include "response.h"
-#include "route.h"
-#include "serialize.h"
-#include "types.h"
 
 #include <arpa/inet.h>
 #include <cstring>
-#include <expected>
 #include <iostream>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-namespace http {
+namespace net {
 
 namespace {
 
@@ -45,21 +39,15 @@ void setup(uint16_t port) {
   }
 }
 
-void run() {
+void run(Handler handler) {
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 
   while (int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len)) {
     char buffer[config::BUFFER_SIZE] = {0};
     read(client_fd, buffer, config::BUFFER_SIZE - 1);
-    std::expected<http::Request, http::ParseError> request = http::parse_request(std::string(buffer));
-    http::Response response{};
-    auto handler = http::get_route_handler(request->requestLine.method, request->requestLine.uri, request->params);
-    if (handler) {
-      (*handler)(*request, response);
-    }
-    std::string response_str = http::r_to_string(response);
-    write(client_fd, response_str.c_str(), strlen(response_str.c_str()));
+    std::string response_str = handler(std::string(buffer));
+    write(client_fd, response_str.c_str(), response_str.size());
     shutdown(client_fd, SHUT_WR);
     close(client_fd);
   }
@@ -75,15 +63,14 @@ Server::~Server() {
   }
 }
 
-void Server::listen() {
+void Server::listen(Handler handler) {
   if (::listen(server_fd, config::CONNECTION_BACKLOG) != 0) {
     std::cerr << "listen failed\n";
     return;
   }
 
   std::cout << "Server is now listening ...\n";
-  run();
+  run(std::move(handler));
 }
 
-} // namespace http
-
+} // namespace net

@@ -1,14 +1,18 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
+#include <string>
 
-namespace http {
+namespace net {
+
+using Handler = std::function<std::string(const std::string &)>;
 
 struct Server {
   Server(uint16_t port);
   ~Server();
 
-  void listen();
+  void listen(Handler handler);
 };
 
-} // namespace http
+} // namespace net

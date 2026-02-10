@@ -1,5 +1,8 @@
 #include <config.h>
+#include <parse.h>
+#include <response.h>
 #include <route.h>
+#include <serialize.h>
 #include <server.h>
 
 #include <iostream>
@@ -16,8 +19,17 @@ int main() {
     res.send(req.headers.data.at("User-Agent"));
   });
 
-  http::Server server(config::PORT);
-  server.listen();
+  net::Server server(config::PORT);
+  server.listen([](const std::string &raw) -> std::string {
+    auto request = http::parse_request(raw);
+    http::Response response{};
+    auto handler = http::get_route_handler(request->requestLine.method,
+                                           request->requestLine.uri, request->params);
+    if (handler) {
+      (*handler)(*request, response);
+    }
+    return http::r_to_string(response);
+  });
 
   return 0;
 }
