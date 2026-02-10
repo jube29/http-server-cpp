@@ -96,6 +96,24 @@ TEST_F(RoutePublicAPITest, RouteNormalizationWithoutLeadingSlash) {
   EXPECT_EQ(res.responseLine.status.code, 200);
 }
 
+TEST_F(RoutePublicAPITest, RootRouteReturns200) {
+  get("/", [](const Request &req, Response &res) {});
+
+  Request req = make_request(Method::Get, "/");
+  Response res{};
+  dispatch(req, res);
+  EXPECT_EQ(res.responseLine.status.code, 200);
+  EXPECT_STREQ(res.responseLine.status.reason, "OK");
+}
+
+TEST_F(RoutePublicAPITest, UnknownRouteReturns404) {
+  Request req = make_request(Method::Get, "/unknown-path");
+  Response res{};
+  dispatch(req, res);
+  EXPECT_EQ(res.responseLine.status.code, 404);
+  EXPECT_STREQ(res.responseLine.status.reason, "Not Found");
+}
+
 TEST_F(RoutePublicAPITest, RouteNormalizationMixedSlashes) {
   bool called = false;
   get("/api/mixed-slashes/",
