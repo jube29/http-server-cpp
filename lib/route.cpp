@@ -112,13 +112,14 @@ void get(string route, RouteHandler handler) {
   });
 }
 
-optional<RouteHandler> get_route_handler(Method method, string route, Params &params) {
+optional<RouteHandler> get_route_handler(Request &request) {
+  auto route = request.requestLine.uri;
   normalize_route(route);
-  auto *end = find_route(root, route, params);
+  auto *end = find_route(root, route, request.params);
   if (!end) {
     return nullopt;
   }
-  return end->get_handler(method);
+  return end->get_handler(request.requestLine.method);
 }
 
 } // namespace http

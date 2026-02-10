@@ -10,7 +10,7 @@ Request make_request(Method method, const std::string &uri) {
 }
 
 void dispatch(Request &req, Response &res) {
-  auto handler = get_route_handler(req.requestLine.method, req.requestLine.uri, req.params);
+  auto handler = get_route_handler(req);
   if (handler) {
     (*handler)(req, res);
   }

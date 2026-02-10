@@ -23,8 +23,7 @@ int main() {
   server.listen([](const std::string &raw) -> std::string {
     auto request = http::parse_request(raw);
     http::Response response{};
-    auto handler = http::get_route_handler(request->requestLine.method,
-                                           request->requestLine.uri, request->params);
+    auto handler = http::get_route_handler(*request);
     if (handler) {
       (*handler)(*request, response);
     }
