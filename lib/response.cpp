@@ -14,4 +14,16 @@ void Response::send(std::string content) {
   set_content_length();
 }
 
+std::string Response::to_str() const {
+  std::string result = VERSION + " " +
+                       std::to_string(responseLine.status.code) + " " +
+                       responseLine.status.reason + "\r\n";
+  for (const auto &[key, value] : headers.data) {
+    result += key + ": " + value + "\r\n";
+  }
+  result += "\r\n";
+  result += body;
+  return result;
+}
+
 } // namespace http

@@ -19,6 +19,7 @@ struct Response {
   void set_status(Status status);
   void set_content_length();
   void send(std::string body);
+  std::string to_str() const;
 };
 
 using RouteHandler = std::function<void(const Request &, Response &)>;

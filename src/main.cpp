@@ -2,7 +2,6 @@
 #include <parse.h>
 #include <response.h>
 #include <route.h>
-#include <serialize.h>
 #include <server.h>
 
 #include <iostream>
@@ -27,7 +26,7 @@ int main() {
     if (handler) {
       (*handler)(*request, response);
     }
-    return http::r_to_string(response);
+    return response.to_str();
   });
 
   return 0;
