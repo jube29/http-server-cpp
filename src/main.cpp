@@ -53,6 +53,9 @@ int main() {
   http::get("/echo/:content", [](const http::Request &req, http::Response &res) {
     res.send(req.params.at("content"));
   });
+  http::get("/user-agent", [](const http::Request &req, http::Response &res) {
+    res.send(req.headers.data.at("User-Agent"));
+  });
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 
