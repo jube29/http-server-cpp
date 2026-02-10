@@ -87,6 +87,13 @@ void create_route(Method method, string route, RouteHandler handler) {
   end.add_handler(method, handler);
 }
 
+void get(string route, RouteHandler handler) {
+  create_route(Method::Get, std::move(route), [handler = std::move(handler)](const Request &req, Response &res) {
+    res.set_status(status::OK);
+    handler(req, res);
+  });
+}
+
 optional<RouteHandler> get_route_handler(Method method, string route) {
   normalize_route(route);
   auto *end = find_route(root, route);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "response.h"
 #include <string>
 
 namespace http {

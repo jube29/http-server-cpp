@@ -1,5 +1,6 @@
 #include <config.h>
 #include <parse.h>
+#include <response.h>
 #include <route.h>
 #include <serialize.h>
 #include <types.h>
@@ -48,9 +49,7 @@ int main() {
     return 1;
   }
 
-  http::create_route(http::Method::Get, "/", [](const http::Request &req, http::Response &res) {
-    res.responseLine = {http::Version::Http11, http::status::OK};
-  });
+  http::get("/", [](const http::Request &req, http::Response &res) {});
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 
@@ -64,8 +63,6 @@ int main() {
     auto handler = http::get_route_handler(request->requestLine.method, request->requestLine.uri);
     if (handler) {
       (*handler)(*request, response);
-    } else {
-      response.responseLine = {http::Version::Http11, http::status::NOT_FOUND};
     }
     std::string response_str = http::r_to_string(response);
     write(client_fd, response_str.c_str(), strlen(response_str.c_str()));
