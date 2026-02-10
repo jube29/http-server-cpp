@@ -50,6 +50,9 @@ int main() {
   }
 
   http::get("/", [](const http::Request &req, http::Response &res) {});
+  http::get("/echo/:content", [](const http::Request &req, http::Response &res) {
+    res.send(req.params.at("content"));
+  });
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
 
@@ -60,7 +63,7 @@ int main() {
     read(client_fd, buffer, config::BUFFER_SIZE - 1);
     std::expected<http::Request, http::ParseError> request = http::parse_request(std::string(buffer));
     http::Response response{};
-    auto handler = http::get_route_handler(request->requestLine.method, request->requestLine.uri);
+    auto handler = http::get_route_handler(request->requestLine.method, request->requestLine.uri, request->params);
     if (handler) {
       (*handler)(*request, response);
     }

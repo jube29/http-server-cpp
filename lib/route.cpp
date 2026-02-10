@@ -59,7 +59,7 @@ RouteNode &create_route_internal(RouteNode &node, string_view route) {
   return create_route_internal(next, route);
 }
 
-const RouteNode *find_route(const RouteNode &node, string_view route) {
+const RouteNode *find_route(const RouteNode &node, string_view route, Params &params) {
   const auto &children = node.get_children();
   if (route.empty()) {
     auto it = children.find("");
@@ -69,13 +69,31 @@ const RouteNode *find_route(const RouteNode &node, string_view route) {
     return &it->second;
   }
   auto pos = route.find('/');
-  string key = string(route.substr(0, pos));
-  auto it = children.find(key);
-  if (it == children.end()) {
-    return nullptr;
-  }
+  string segment = string(route.substr(0, pos));
   route.remove_prefix(pos + 1);
-  return find_route(it->second, route);
+
+  // 1. Exact match
+  auto it = children.find(segment);
+  if (it != children.end()) {
+    auto *result = find_route(it->second, route, params);
+    if (result) {
+      return result;
+    }
+  }
+
+  // 2. Fallback to param match (`:` prefixed child)
+  for (const auto &[key, child] : children) {
+    if (key.starts_with(':')) {
+      params[key.substr(1)] = segment;
+      auto *result = find_route(child, route, params);
+      if (result) {
+        return result;
+      }
+      params.erase(key.substr(1));
+    }
+  }
+
+  return nullptr;
 }
 } // namespace
 
@@ -94,9 +112,9 @@ void get(string route, RouteHandler handler) {
   });
 }
 
-optional<RouteHandler> get_route_handler(Method method, string route) {
+optional<RouteHandler> get_route_handler(Method method, string route, Params &params) {
   normalize_route(route);
-  auto *end = find_route(root, route);
+  auto *end = find_route(root, route, params);
   if (!end) {
     return nullopt;
   }

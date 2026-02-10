@@ -36,9 +36,12 @@ struct RequestLine {
   std::string version;
 };
 
+using Params = std::unordered_map<std::string, std::string>;
+
 struct Request {
   RequestLine requestLine;
   Headers headers;
+  Params params;
 };
 
 inline std::optional<Method> parse_method(std::string_view strv) {
