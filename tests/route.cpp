@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <fstream>
+
+#include "../lib/config.h"
 #include "../lib/route.h"
 
 using namespace http;
@@ -217,4 +220,45 @@ TEST_F(RoutePublicAPITest, EchoRouteReturnsDifferentContent) {
   dispatch(req, res);
   EXPECT_EQ(res.responseLine.status.code, 200);
   EXPECT_EQ(res.body, "world");
+}
+
+TEST_F(RoutePublicAPITest, SendFileReturnsFileContent) {
+  std::string tmp_dir = testing::TempDir();
+  std::string filename = "test_send_file.txt";
+  std::string content = "hello file content";
+
+  std::ofstream out(tmp_dir + filename);
+  out << content;
+  out.close();
+
+  config::directory = tmp_dir;
+
+  get("/dl/:filename", [](const Request &req, Response &res) {
+    res.send_file(config::directory + req.params.at("filename"));
+  });
+
+  Request req = make_request(Method::Get, "/dl/" + filename);
+  Response res{};
+  dispatch(req, res);
+  EXPECT_EQ(res.responseLine.status.code, 200);
+  EXPECT_EQ(res.body, content);
+  EXPECT_EQ(res.headers.data.at("Content-Type"), "application/octet-stream");
+  EXPECT_EQ(res.headers.data.at("Content-Length"),
+            std::to_string(content.size()));
+
+  std::remove((tmp_dir + filename).c_str());
+}
+
+TEST_F(RoutePublicAPITest, SendFileReturns404ForMissingFile) {
+  config::directory = testing::TempDir();
+
+  get("/dl2/:filename", [](const Request &req, Response &res) {
+    res.send_file(config::directory + req.params.at("filename"));
+  });
+
+  Request req = make_request(Method::Get, "/dl2/nonexistent.txt");
+  Response res{};
+  dispatch(req, res);
+  EXPECT_EQ(res.responseLine.status.code, 404);
+  EXPECT_TRUE(res.body.empty());
 }

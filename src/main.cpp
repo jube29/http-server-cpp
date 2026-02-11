@@ -6,9 +6,15 @@
 
 #include <iostream>
 
-int main() {
+int main(int argc, char *argv[]) {
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
+
+  for (int i = 1; i < argc - 1; ++i) {
+    if (std::string(argv[i]) == "--directory") {
+      config::directory = argv[i + 1];
+    }
+  }
 
   http::get("/", [](const http::Request &req, http::Response &res) {});
   http::get("/echo/:content", [](const http::Request &req, http::Response &res) {
@@ -16,6 +22,9 @@ int main() {
   });
   http::get("/user-agent", [](const http::Request &req, http::Response &res) {
     res.send(req.headers.data.at("User-Agent"));
+  });
+  http::get("/files/:filename", [](const http::Request &req, http::Response &res) {
+    res.send_file(config::directory + "/" + req.params.at("filename"));
   });
 
   net::Server server(config::PORT);

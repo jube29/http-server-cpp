@@ -19,6 +19,7 @@ struct Response {
   void set_status(Status status);
   void set_content_length();
   void send(std::string body);
+  void send_file(const std::string &path);
   std::string to_str() const;
 };
 

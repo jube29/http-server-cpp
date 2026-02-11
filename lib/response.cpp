@@ -1,5 +1,8 @@
 #include "response.h"
 
+#include <fstream>
+#include <sstream>
+
 namespace http {
 
 void Response::set_status(Status status) { responseLine.status = status; }
@@ -12,6 +15,20 @@ void Response::send(std::string content) {
   body = std::move(content);
   headers.data.emplace("Content-Type", "text/plain");
   set_content_length();
+}
+
+void Response::send_file(const std::string &path) {
+  std::ifstream file(path, std::ios::binary);
+  if (!file) {
+    set_status(status::NOT_FOUND);
+    return;
+  }
+  std::ostringstream ss;
+  ss << file.rdbuf();
+  body = ss.str();
+  headers.data.emplace("Content-Type", "application/octet-stream");
+  set_content_length();
+  set_status(status::OK);
 }
 
 std::string Response::to_str() const {
