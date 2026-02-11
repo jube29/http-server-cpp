@@ -4,6 +4,7 @@
 #include <route.h>
 #include <server.h>
 
+#include <fstream>
 #include <iostream>
 
 int main(int argc, char *argv[]) {
@@ -26,11 +27,20 @@ int main(int argc, char *argv[]) {
   http::get("/files/:filename", [](const http::Request &req, http::Response &res) {
     res.send_file(config::directory + "/" + req.params.at("filename"));
   });
+  http::post("/files/:filename", [](const http::Request &req, http::Response &res) {
+    std::string path = config::directory + "/" + req.params.at("filename");
+    std::ofstream file(path, std::ios::binary);
+    file << req.body;
+  });
 
   net::Server server(config::PORT);
   server.listen([](const std::string &raw) -> std::string {
     auto request = http::parse_request(raw);
     http::Response response{};
+    if (!request) {
+      response.set_status(http::status::BAD_REQUEST);
+      return response.to_str();
+    }
     auto handler = http::get_route_handler(*request);
     if (handler) {
       (*handler)(*request, response);

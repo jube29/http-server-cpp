@@ -46,7 +46,7 @@ expected<RequestLine, ParseError> parse_request_line(string_view strv) {
 
 expected<Headers, ParseError> parse_headers(string_view strv) {
   Headers headers;
-  while (!strv.empty() && strv != "\r\n") {
+  while (!strv.empty() && !strv.starts_with("\r\n")) {
     size_t line_end = strv.find("\r\n");
     if (line_end == string_view::npos) {
       return unexpected(ParseError::MalformedHeader);
@@ -68,6 +68,15 @@ expected<Headers, ParseError> parse_headers(string_view strv) {
   return headers;
 }
 
+string parse_body(string_view strv, const Headers &headers) {
+  auto it = headers.data.find("Content-Length");
+  if (it == headers.data.end()) {
+    return {};
+  }
+  size_t content_length = stoul(it->second);
+  return string(strv.substr(0, content_length));
+}
+
 expected<Request, ParseError> parse_request(string_view strv) {
   Request request{};
   size_t request_line_end = strv.find("\r\n");
@@ -87,7 +96,11 @@ expected<Request, ParseError> parse_request(string_view strv) {
   } else {
     return unexpected(headers.error());
   }
-  // TODO body
+  size_t body_sep = strv.find("\r\n\r\n");
+  if (body_sep != string_view::npos) {
+    strv.remove_prefix(body_sep + 4); // skip headers + blank line
+  }
+  request.body = parse_body(strv, request.headers);
   return request;
 }
 

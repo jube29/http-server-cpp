@@ -8,8 +8,9 @@
 using namespace http;
 
 namespace {
-Request make_request(Method method, const std::string &uri) {
-  return Request{{method, uri, "HTTP/1.1"}, {}};
+Request make_request(Method method, const std::string &uri,
+                     const std::string &body = {}) {
+  return Request{{method, uri, "HTTP/1.1"}, {}, {}, body};
 }
 
 void dispatch(Request &req, Response &res) {
@@ -261,4 +262,42 @@ TEST_F(RoutePublicAPITest, SendFileReturns404ForMissingFile) {
   dispatch(req, res);
   EXPECT_EQ(res.responseLine.status.code, 404);
   EXPECT_TRUE(res.body.empty());
+}
+
+TEST_F(RoutePublicAPITest, PostFileCreatesFile) {
+  std::string tmp_dir = testing::TempDir();
+  std::string filename = "test_post_file.txt";
+  std::string content = "hello post content";
+  config::directory = tmp_dir;
+
+  post("/upload/:filename", [](const Request &req, Response &res) {
+    std::string path = config::directory + "/" + req.params.at("filename");
+    std::ofstream file(path, std::ios::binary);
+    file << req.body;
+  });
+
+  Request req = make_request(Method::Post, "/upload/" + filename, content);
+  Response res{};
+  dispatch(req, res);
+  EXPECT_EQ(res.responseLine.status.code, 201);
+
+  std::ifstream in(tmp_dir + "/" + filename);
+  std::string file_content((std::istreambuf_iterator<char>(in)),
+                           std::istreambuf_iterator<char>());
+  EXPECT_EQ(file_content, content);
+
+  std::remove((tmp_dir + "/" + filename).c_str());
+}
+
+TEST_F(RoutePublicAPITest, PostFileGetMethodReturns404) {
+  post("/upload-only/:filename", [](const Request &req, Response &res) {
+    std::string path = config::directory + "/" + req.params.at("filename");
+    std::ofstream file(path, std::ios::binary);
+    file << req.body;
+  });
+
+  Request req = make_request(Method::Get, "/upload-only/test.txt");
+  Response res{};
+  dispatch(req, res);
+  EXPECT_EQ(res.responseLine.status.code, 404);
 }

@@ -112,6 +112,13 @@ void get(string route, RouteHandler handler) {
   });
 }
 
+void post(string route, RouteHandler handler) {
+  create_route(Method::Post, std::move(route), [handler = std::move(handler)](const Request &req, Response &res) {
+    res.set_status(status::CREATED);
+    handler(req, res);
+  });
+}
+
 optional<RouteHandler> get_route_handler(Request &request) {
   auto route = request.requestLine.uri;
   normalize_route(route);
