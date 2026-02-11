@@ -3,17 +3,30 @@
 
 #include <arpa/inet.h>
 #include <cstring>
+#include <fcntl.h>
 #include <iostream>
 #include <netdb.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-namespace net {
-
 namespace {
 
 int server_fd = -1;
+int epoll_fd = -1;
+
+void set_nonblocking(int fd) {
+  int flags = fcntl(fd, F_GETFL, 0);
+  fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+
+void epoll_add(int fd, uint32_t events) {
+  struct epoll_event ev;
+  ev.events = events;
+  ev.data.fd = fd;
+  epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+}
 
 void setup(uint16_t port) {
   server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -37,27 +50,73 @@ void setup(uint16_t port) {
     std::cerr << "Failed to bind to port " << port << "\n";
     return;
   }
+
+  set_nonblocking(server_fd);
+
+  epoll_fd = epoll_create1(0);
+  if (epoll_fd < 0) {
+    std::cerr << "Failed to create epoll instance\n";
+    return;
+  }
+
+  epoll_add(server_fd, EPOLLIN);
 }
 
-void run(Handler handler) {
+void handle_new_connection() {
   struct sockaddr_in client_addr;
-  int client_addr_len = sizeof(client_addr);
+  socklen_t client_addr_len = sizeof(client_addr);
 
-  while (int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len)) {
-    char buffer[config::BUFFER_SIZE] = {0};
-    read(client_fd, buffer, config::BUFFER_SIZE - 1);
-    std::string response_str = handler(std::string(buffer));
-    write(client_fd, response_str.c_str(), response_str.size());
-    shutdown(client_fd, SHUT_WR);
+  int client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+  if (client_fd < 0)
+    return;
+
+  set_nonblocking(client_fd);
+  epoll_add(client_fd, EPOLLIN);
+}
+
+void handle_client(int client_fd, net::Handler &handler) {
+  char buffer[config::BUFFER_SIZE] = {0};
+  ssize_t bytes = read(client_fd, buffer, config::BUFFER_SIZE - 1);
+
+  if (bytes <= 0) {
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
     close(client_fd);
+    return;
+  }
+
+  std::string response_str = handler(std::string(buffer, bytes));
+  write(client_fd, response_str.c_str(), response_str.size());
+  shutdown(client_fd, SHUT_WR);
+  epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
+  close(client_fd);
+}
+
+void run(net::Handler handler) {
+  struct epoll_event events[config::MAX_EVENTS];
+
+  while (true) {
+    int n = epoll_wait(epoll_fd, events, config::MAX_EVENTS, -1);
+
+    for (int i = 0; i < n; i++) {
+      if (events[i].data.fd == server_fd) {
+        handle_new_connection();
+      } else {
+        handle_client(events[i].data.fd, handler);
+      }
+    }
   }
 }
 
 } // namespace
 
+namespace net {
+
 Server::Server(uint16_t port) { setup(port); }
 
 Server::~Server() {
+  if (epoll_fd >= 0) {
+    close(epoll_fd);
+  }
   if (server_fd >= 0) {
     close(server_fd);
   }
