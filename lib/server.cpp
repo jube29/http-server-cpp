@@ -74,7 +74,7 @@ void handle_new_connection() {
   epoll_add(client_fd, EPOLLIN);
 }
 
-void handle_client(int client_fd, net::Handler &handler) {
+void handle_client(int client_fd, const net::Handler &handler) {
   char buffer[config::BUFFER_SIZE] = {0};
   ssize_t bytes = read(client_fd, buffer, config::BUFFER_SIZE - 1);
 
@@ -91,7 +91,7 @@ void handle_client(int client_fd, net::Handler &handler) {
   close(client_fd);
 }
 
-void run(net::Handler handler) {
+void run(const net::Handler &handler) {
   struct epoll_event events[config::MAX_EVENTS];
 
   while (true) {
@@ -133,3 +133,4 @@ void Server::listen(Handler handler) {
 }
 
 } // namespace net
+
