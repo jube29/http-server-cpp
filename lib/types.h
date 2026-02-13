@@ -29,6 +29,8 @@ enum class ParseError { MalformedRequest, MalformedRequestLine, UnsupportedMetho
 
 struct Headers {
   std::unordered_map<std::string, std::string> data;
+
+  void set(const std::string &key, const std::string &value) { data[key] = value; }
 };
 
 struct RequestLine {

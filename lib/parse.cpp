@@ -62,7 +62,7 @@ expected<Headers, ParseError> parse_headers(string_view strv) {
     while (!value.empty() && value[0] == ' ') {
       value.remove_prefix(1);
     }
-    headers.data[name] = string(value);
+    headers.set(string(name), string(value));
     strv.remove_prefix(line_end + 2);
   }
   return headers;

@@ -34,7 +34,7 @@ class ResponseEncodingTest : public ::testing::Test {};
 TEST_F(ResponseEncodingTest, GzipCompressesBody) {
   Response res{};
   res.send("hello world");
-  res.headers.data["Content-Encoding"] = "gzip";
+  res.headers.set("Content-Encoding", "gzip");
   res.encode_gzip();
 
   EXPECT_NE(res.body, "hello world");
