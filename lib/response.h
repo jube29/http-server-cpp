@@ -3,7 +3,6 @@
 #include "types.h"
 #include <functional>
 #include <string>
-#include <vector>
 
 namespace http {
 
@@ -28,3 +27,4 @@ struct Response {
 using RouteHandler = std::function<void(const Request &, Response &)>;
 
 } // namespace http
+
