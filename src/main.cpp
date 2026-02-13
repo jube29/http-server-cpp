@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
     }
     auto ae = request->headers.data.find("Accept-Encoding");
     if (ae != request->headers.data.end() && ae->second.find("gzip") != std::string::npos) {
-      response.headers.data["Content-Encoding"] = "gzip";
+      response.encode_gzip();
     }
     return response.to_str();
   });

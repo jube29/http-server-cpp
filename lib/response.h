@@ -3,6 +3,7 @@
 #include "types.h"
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace http {
 
@@ -20,6 +21,7 @@ struct Response {
   void set_content_length();
   void send(std::string body);
   void send_file(const std::string &path);
+  void encode_gzip();
   std::string to_str() const;
 };
 
