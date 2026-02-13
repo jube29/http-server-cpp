@@ -43,6 +43,23 @@ TEST_F(ResponseEncodingTest, GzipCompressesBody) {
   EXPECT_EQ(gzip_decompress(res.body), "hello world");
 }
 
+TEST_F(ResponseEncodingTest, ConnectionCloseHeader) {
+  Response res{};
+  res.set_status(status::OK);
+  res.headers.set("Connection", "close");
+
+  std::string str = res.to_str();
+  EXPECT_NE(str.find("Connection: close"), std::string::npos);
+}
+
+TEST_F(ResponseEncodingTest, NoConnectionCloseHeaderByDefault) {
+  Response res{};
+  res.set_status(status::OK);
+
+  std::string str = res.to_str();
+  EXPECT_EQ(str.find("Connection: close"), std::string::npos);
+}
+
 TEST_F(ResponseEncodingTest, InvalidCompressionMethodNoEncoding) {
   Response res{};
   res.send("hello world");

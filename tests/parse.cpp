@@ -56,3 +56,31 @@ TEST_F(ParseHeadersTest, ValueWithColon) {
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(result->data["Time"], "12:30:00");
 }
+
+TEST_F(ParseHeadersTest, ConnectionCloseHeader) {
+  auto result = parse_headers("Connection: close\r\n\r\n");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->data["Connection"], "close");
+}
+
+TEST_F(ParseHeadersTest, ConnectionKeepAliveHeader) {
+  auto result = parse_headers("Connection: keep-alive\r\n\r\n");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->data["Connection"], "keep-alive");
+}
+
+class ParseConnectionTest : public ::testing::Test {};
+
+TEST_F(ParseConnectionTest, FullRequestWithConnectionClose) {
+  auto result = parse_request("GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n");
+  ASSERT_TRUE(result.has_value());
+  auto conn = result->headers.data.find("Connection");
+  ASSERT_NE(conn, result->headers.data.end());
+  EXPECT_EQ(conn->second, "close");
+}
+
+TEST_F(ParseConnectionTest, FullRequestWithoutConnectionHeader) {
+  auto result = parse_request("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->headers.data.find("Connection"), result->headers.data.end());
+}
