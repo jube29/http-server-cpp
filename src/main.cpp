@@ -51,6 +51,9 @@ int main(int argc, char *argv[]) {
     }
     auto conn = request->headers.data.find("Connection");
     bool should_close = conn != request->headers.data.end() && conn->second == "close";
+    if (should_close) {
+      response.headers.set("Connection", "close");
+    }
     return {response.to_str(), should_close};
   });
 
