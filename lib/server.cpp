@@ -84,11 +84,14 @@ void handle_client(int client_fd, const net::Handler &handler) {
     return;
   }
 
-  std::string response_str = handler(std::string(buffer, bytes));
-  write(client_fd, response_str.c_str(), response_str.size());
-  shutdown(client_fd, SHUT_WR);
-  epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
-  close(client_fd);
+  auto result = handler(std::string(buffer, bytes));
+  write(client_fd, result.response.c_str(), result.response.size());
+
+  if (result.close_connection) {
+    shutdown(client_fd, SHUT_WR);
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, client_fd, nullptr);
+    close(client_fd);
+  }
 }
 
 void run(const net::Handler &handler) {

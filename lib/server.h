@@ -6,7 +6,12 @@
 
 namespace net {
 
-using Handler = std::function<std::string(const std::string &)>;
+struct HandlerResult {
+  std::string response;
+  bool close_connection;
+};
+
+using Handler = std::function<HandlerResult(const std::string &)>;
 
 struct Server {
   Server(uint16_t port);

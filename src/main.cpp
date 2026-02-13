@@ -34,12 +34,12 @@ int main(int argc, char *argv[]) {
   });
 
   net::Server server(config::PORT);
-  server.listen([](const std::string &raw) -> std::string {
+  server.listen([](const std::string &raw) -> net::HandlerResult {
     auto request = http::parse_request(raw);
     http::Response response{};
     if (!request) {
       response.set_status(http::status::BAD_REQUEST);
-      return response.to_str();
+      return {response.to_str(), true};
     }
     auto handler = http::get_route_handler(*request);
     if (handler) {
@@ -49,7 +49,9 @@ int main(int argc, char *argv[]) {
     if (ae != request->headers.data.end() && ae->second.find("gzip") != std::string::npos) {
       response.encode_gzip();
     }
-    return response.to_str();
+    auto conn = request->headers.data.find("Connection");
+    bool should_close = conn != request->headers.data.end() && conn->second == "close";
+    return {response.to_str(), should_close};
   });
 
   return 0;
